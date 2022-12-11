@@ -1,0 +1,197 @@
+---
+title: "Visualiztion_for_meg"
+output: html_document
+date: '2022-12-04'
+---
+
+### Setup chunk
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = '/work/LasseHyldigHansen#1744/MEG_Analysis')
+```
+
+### Loading packages
+
+```{r}
+install.packages("pacman")
+pacman::p_load(tidyverse, 
+               readr,
+               ggrepel,
+               ggpubr
+               )
+```
+
+### Loading csv files
+
+```{r}
+files <- list.files(pattern = ".csv",full.names = T)
+data <- lapply(files, read_csv, col_names = F) %>%
+          bind_cols()
+
+colnames(data) <- c("Participant 0085", "Participant 0086", "Participant 0087", "Participant 0088", "Participant 0089", "Participant 0095", "Times")
+```
+
+### Overall plot for all times
+
+```{r}
+data_long = data %>% 
+            pivot_longer(1:6) %>% 
+            mutate(name = as.factor(name))
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+df2 <- data_summary(data_long, varname="value", 
+                    groupnames= "name")
+
+p1 <- ggplot(df2, aes(x=name, y=value)) + 
+  geom_line() +
+  geom_point()+
+  geom_errorbar(aes(ymin=value-sd, ymax=value+sd), width=.2,
+                 position=position_dodge(0.05)) +
+  geom_hline(yintercept = 0.50) +
+  theme_classic() +
+  ylab("Proportion classified correct") +
+  xlab("Participant") + 
+  ggtitle("Average effects for each participant to all time-points")
+p1
+
+arrows1 <- 
+  tibble(
+    x1 = c(3, 3),
+    x2 = c(3.95, 4),
+    y1 = c(0.65, 0.45),
+    y2 = c(0.56, 0.50) 
+  )
+
+p1 <- p1 + geom_curve(
+    data = arrows1, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(0.08, "inch")), size = 0.8,
+    color = "gray20", curvature = -0.1) +
+      annotate("text", x = 2.5, y = 0.65, label = "Peak effect: 55.7%", size = 3) +
+      annotate("text", x = 2.5, y = 0.45, label = "Chance level: 50%", size = 3)
+```
+
+### Times between 0 and 0.3 seconds
+
+
+```{r}
+data_long = data %>% filter(Times >= 0.05 & Times <= 0.15) %>% 
+            pivot_longer(1:6) %>% 
+            mutate(name = as.factor(name))
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+df2 <- data_summary(data_long, varname="value", 
+                    groupnames= "name")
+
+p2 <- ggplot(df2, aes(x=name, y=value)) + 
+  geom_line() +
+  geom_point()+
+  geom_errorbar(aes(ymin=value-sd, ymax=value+sd), width=.2,
+                 position=position_dodge(0.05)) +
+  geom_hline(yintercept = 0.50) +
+  theme_classic() + 
+  ylab("Proportion classified correct") +
+  xlab("Participant") + 
+  ggtitle("Average effects for each participant to time-points: 0.05 - 0.15")
+
+
+arrows2 <- 
+  tibble(
+    x1 = c(3, 3),
+    x2 = c(3.95, 4),
+    y1 = c(0.65, 0.45),
+    y2 = c(0.6165556, 0.50) 
+  )
+
+p2 <- p2 + geom_curve(
+    data = arrows2, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(0.08, "inch")), size = 0.8,
+    color = "gray20", curvature = -0.1) +
+      annotate("text", x = 2.5, y = 0.65, label = "Peak effect: 60.9%", size = 3) +
+      annotate("text", x = 2.5, y = 0.45, label = "Chance level: 50%", size = 3)
+p2
+```
+
+
+### Average + SD for all participants over time
+
+```{r}
+data_long = data %>%
+            pivot_longer(1:6) %>% 
+            mutate(name = as.factor(name))
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+df2 <- data_summary(data_long, varname="value", 
+                    groupnames= "Times")
+
+time_series_plot <- ggplot(df2, aes(x=Times, y=value)) + 
+  geom_line()+
+  geom_pointrange(aes(ymin=value-sd, ymax=value+sd)) +
+  #geom_hline(yintercept = 0.50) +
+  geom_segment(aes(x=-0.2,xend=0.5,y=0.5,yend=0.5)) +
+  theme_classic() +
+  scale_x_continuous(breaks = c(-0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7)) +
+  ylab("Proportion classified correct") +
+  xlab("Time-point") +
+  ggtitle("Average effects for all participants to all time-points")
+
+
+arrows <- 
+  tibble(
+    x1 = c(0.0, 0.0),
+    x2 = c(0.132, 0.132),
+    y1 = c(0.65, 0.40),
+    y2 = c(0.603, 0.50) 
+  )
+
+p3 <- time_series_plot + geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(0.08, "inch")), size = 0.8,
+    color = "gray20", curvature = -0.3) +
+      annotate("text", x = -0.07, y = 0.65, label = "Peak effect: 60.3%", size = 3) +
+      annotate("text", x = -0.07, y = 0.64, label = "Time-point: 0.132 ms", size = 3) +
+      annotate("text", x = -0.07, y = 0.40, label = "Chance level: 50%", size = 3)
+
+```
+
+
+```{r}
+ggarrange(p1, p3, p2, labels = c("A",
+                                 "B",
+                                 "C"))
+```
+

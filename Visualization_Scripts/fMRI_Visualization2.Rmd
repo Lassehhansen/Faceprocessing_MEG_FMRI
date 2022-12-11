@@ -1,0 +1,86 @@
+---
+title: "MR_visualization2"
+output: html_document
+date: '2022-12-07'
+---
+
+### Setup chunk
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_knit$set(root.dir = '/work/LasseHyldigHansen#1744/MR_Analysis')
+```
+
+### Loading packages
+
+```{r}
+install.packages("pacman")
+pacman::p_load(tidyverse, 
+               readr,
+               ggrepel,
+               ggpubr
+               )
+```
+
+```{r}
+cv_scores <- read_csv("cv_scores.csv")
+cv_transpose <- as.data.frame(t(cv_scores))
+```
+
+```{r}
+df <- cv_transpose[2:11,]
+
+colnames(df) <- c("Part01", "Part02", "Part03", "Part04", "Part05", "Part06", "Part07", "Part08", "Part09", "Part10", "Part11", "Part12", "Part13", "Part14", "Part15", "Part16", "Part17", "Part18", "Part19", "Part20", "Part21", "Part22")
+```
+
+
+```{r}
+data_long = df %>%
+            pivot_longer(1:22) %>% 
+            mutate(name = as.factor(name))
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+df2 <- data_summary(data_long, varname="value", 
+                    groupnames= "name")
+
+p2 <- ggplot(df2, aes(x=name, y=value)) + 
+  geom_line() +
+  geom_point()+
+  geom_errorbar(aes(ymin=value-sd, ymax=value+sd), width=.2,
+                 position=position_dodge(0.05)) +
+  geom_hline(yintercept = 0.50) +
+  theme_classic() + 
+  ylab("Average classification score") +
+  xlab("Participant") + 
+  ggtitle("Average score for the 10 cross validations")
+
+p2
+
+arrows2 <- 
+  tibble(
+    x1 = c(6, 6),
+    x2 = c(8.95, 9),
+    y1 = c(0.80, 0.21),
+    y2 = c(0.7142857, 0.50) 
+  )
+
+p2 <- p2 + geom_curve(
+    data = arrows2, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(0.08, "inch")), size = 0.8,
+    color = "gray20", curvature = -0.1) +
+      annotate("text", x = 5, y = 0.8, label = "Peak effect: 71.4%", size = 3) +
+      annotate("text", x = 5, y = 0.21, label = "Chance level: 50%", size = 3)
+p2
+```

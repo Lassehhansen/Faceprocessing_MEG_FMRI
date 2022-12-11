@@ -1,0 +1,231 @@
+---
+title: "Visualization_MR_analysis"
+output: html_document
+date: '2022-12-05'
+---
+
+```{r}
+install.packages("pacman")
+pacman::p_load(tidyverse,
+               ggridges,
+               viridis,
+               ggthemes)
+```
+
+
+```{r}
+library(readr)
+Permutation_scores <- read_csv("Permutation-scores.csv")
+Permutation_scores$...1 <- NULL
+Permutation_scores$`Permutation Scores` <- NULL
+
+Only_permutation_scores <- read_csv("Only-permutation-scores.csv")
+Only_permutation_scores$...1 <- NULL
+colnames(Only_permutation_scores) <- c("Part01", "Part02", "Part03", "Part04", "Part05", "Part06", "Part07", "Part08", "Part09", "Part10", "Part11", "Part12", "Part13", "Part14", "Part15", "Part16", "Part17", "Part18", "Part19", "Part20", "Part21", "Part22")
+```
+
+```{r}
+Part_vector <- c("Part01", "Part02", "Part03", "Part04", "Part05", "Part06", "Part07", "Part08", "Part09", "Part10", "Part11", "Part12", "Part13", "Part14", "Part15", "Part16", "Part17", "Part18", "Part19", "Part20", "Part21", "Part22")
+
+Permutation_scores$name <- Part_vector
+```
+
+### Overall plot for all times
+
+```{r}
+data_long = Only_permutation_scores %>% 
+            pivot_longer(1:22) %>% 
+            mutate(name = as.factor(name))
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+df2 <- data_summary(data_long, varname="value", 
+                    groupnames= "name")
+
+df4 <- cbind(df2, Permutation_scores)
+
+p<- ggplot(df2, aes(x=name, y=value, group=name, color=name)) + 
+  geom_line() +
+  geom_point()+
+  geom_errorbar(aes(ymin=value-sd, ymax=value+sd), width=.2,
+                 position=position_dodge(0.05)) +
+  geom_hline(yintercept = 0.50) +
+  theme_classic()
+p
+```
+
+
+### Overall plot for all times
+
+```{r}
+
+data_long = Only_permutation_scores %>% 
+            pivot_longer(2:23) %>% 
+            mutate(name = as.factor(name))
+
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+df2 <- data_summary(data_long, varname="value", 
+                    groupnames= "name")
+
+df4 <- cbind(df2, Permutation_scores)
+
+p<- ggplot(df2, aes(x=name, y=value, group=name, color=name)) + 
+  geom_line() +
+  geom_point()+
+  geom_errorbar(aes(ymin=value-sd, ymax=value+sd), width=.2,
+                 position=position_dodge(0.05)) +
+  geom_hline(yintercept = 0.50) +
+  theme_classic()
+p
+```
+
+
+```{r}
+
+data_long_plot1 = Only_permutation_scores %>% 
+                   pivot_longer(1:22) %>% 
+                   mutate(name = as.factor(name))
+
+data_long_plot11 <- left_join(data_long_plot1, Permutation_scores)
+data_long_plot11$name <- as.factor(data_long_plot11$name)
+data_long_plot11 = data_long_plot11 %>% 
+                   mutate("p-value"  = ifelse(Pvalue < 0.05, "p < 0.05", "p > 0.05 "))
+
+data_long_plot11$P_Significant <- as.factor(data_long_plot11$`p-value`)
+
+
+ggplot(data_long_plot11, aes(x = value, y = name, fill = factor(..quantile..))) + 
+  #geom_point(aes(x = Scores, y = name)) +
+  stat_density_ridges(quantiles = c(0.25,0.5,0.75)
+                        , quantile_lines = TRUE
+                        , geom = "density_ridges_gradient"
+                        , alpha = 0.6
+                        , scale = 2.3) + 
+  scale_fill_viridis(discrete = TRUE
+                       , name = "Quantile"
+                       , alpha = 0.3
+                       , option = "cividis") + 
+  #geom_label(data = data_long_plot11, aes(y = name, x = Scores), label = "*") + 
+  xlab("Permutation Distribution") + 
+  ylab("Participant") +
+  theme(plot.title = element_text(face="bold")) +
+  theme(plot.subtitle = element_text(face="bold", color="grey")) +
+  theme(plot.caption=element_text(color="grey"))
+```
+
+### Facetting it, so that the plot is not so big
+
+```{r}
+data_long_plot11 = data_long_plot11 %>% 
+                   mutate(Facet_Part = ifelse(name == "Part01", 1,
+                                       ifelse(name == "Part02", 1,        
+                                       ifelse(name == "Part03", 1,
+                                       ifelse(name == "Part04", 1,
+                                       ifelse(name == "Part05", 1,
+                                       ifelse(name == "Part06", 1,
+                                       ifelse(name == "Part07", 1,
+                                       ifelse(name == "Part08", 1,
+                                       ifelse(name == "Part09", 1,
+                                       ifelse(name == "Part10", 1,
+                                       ifelse(name == "Part11", 1,
+                                       ifelse(name == "Part12", 2,
+                                       ifelse(name == "Part13", 2,
+                                       ifelse(name == "Part14", 2,
+                                       ifelse(name == "Part15", 2,
+                                       ifelse(name == "Part16", 2,
+                                       ifelse(name == "Part17", 2,
+                                       ifelse(name == "Part18", 2,
+                                       ifelse(name == "Part19", 2,
+                                       ifelse(name == "Part20", 2,
+                                       ifelse(name == "Part21", 2,
+                                       ifelse(name == "Part22", 2, name       
+                                                    )))))))))))))))))))))))
+```
+
+```{r}
+theme_MR <- theme_classic() +
+  theme(strip.background = element_blank(),
+  strip.text.x = element_blank(),)
+tableau_pal = (ggthemes_data$tableau$`color-palettes`$regular$`Tableau 10`["value"] %>% as.list)$value
+tableau_pal
+```
+
+
+```{r}
+
+ggplot(data_long_plot11, aes(x = value, y = name, fill = `p-value`)) +
+  geom_density_ridges(
+    jittered_points = T,
+    point_shape = "|", point_size = 2, size = 0.25,
+    position = position_points_jitter(height = 0), alpha = 0.5, scale = 0.5) + 
+    geom_label(data = data_long_plot11, aes(y = name, x = Scores), label = "*") +
+  xlab("Permutation Distribution") + 
+  ylab("Participant") +
+  facet_wrap(~Facet_Part, scales = "free") +
+  scale_fill_manual(values=c("#e09f3e", "#335c67")) +
+  #scale_fill_viridis_d(direction = -1, option = "D") +
+  theme_MR
+
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+library(ucidata)
+library(ggplot2)
+library(ggridges)
+library(viridis)
+library(plyr)
+library(nycflights13)
+
+pacman::p_load(ggplot2, ggridges, viridis, plyr, nycflights13)
+
+
+weather$month <- as.factor(weather$month)
+Only_permutation_scores$
+ggplot(Only_permutation_scores, aes(x = temp, y = reorder(month, desc(month)), fill = factor(..quantile..))) + 
+    stat_density_ridges(quantiles = c(0.25,0.5,0.75)
+                        , quantile_lines = TRUE
+                        , geom = "density_ridges_gradient"
+                        , alpha = 0.6
+                        , scale = 2.3) + 
+  scale_fill_viridis(discrete = TRUE
+                       , name = "Quantile"
+                       , alpha = 0.3
+                       , option = "cividis") + 
+  ggtitle("What is the weather like in NYC?",
+          subtitle = "Ridgeline plot for NYC temperature by months") +
+  xlab("Temperature (F)") + 
+  ylab("Months") +
+  labs(caption = "Source: nycflights13::weather") +
+  theme(plot.title = element_text(face="bold")) +
+  theme(plot.subtitle = element_text(face="bold", color="grey")) +
+  theme(plot.caption=element_text(color="grey")) )
+
+```
+
